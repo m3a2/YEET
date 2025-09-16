@@ -20,6 +20,22 @@ app.use(express.urlencoded({ extended: false }));
 const ALLOWED = process.env.ALLOWED_ORIGIN || '*';
 app.use(cors({ origin: ALLOWED }));
 
+
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'tubeten.yeetstudio.work'
+}));
+
+
+// Serve static files from ./public
+const PUBLIC_DIR = path.join(process.cwd(), 'public');
+app.use(express.static(PUBLIC_DIR));
+
+// Serve landing page at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'tubeten.html'));
+});
+
+
 // basic rate limiter
 app.use(rateLimit({
   windowMs: 60 * 1000, // 1 minute

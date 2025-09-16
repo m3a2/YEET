@@ -4,3 +4,7 @@ node_modules
 .DS_Store
 coverage
 .env
+.env
+node_modules
+.DS_Store
+coverage

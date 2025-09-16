@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TubeTen — Start</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+<header class="brand">
+  <a href="https://yeetstudio.work" target="_blank" rel="noopener" aria-label="Go to YEET studio">
+    <img src="Assets/logo-lands.png" width="180" alt="YEET logo" class="brand-img" />
+  </a>
+</header>
+
+<aside class="ad-left"><div class="ad-160x600">Ad</div></aside>
+<aside class="ad-right"><div class="ad-160x600">Ad</div></aside>
+
+<main class="topcenter">
+  <a href="tubeten.html" class="brand-title-link" aria-label="Go to TubeTen start page">
+    <p class="lead">TubeTen : Youtube Video Guessing</p>
+  </a>
+</main>
+
+
+    <main class="center">
+      <section class="card">
+        <div class="card-title">TubeTen</div>
+
+        <div class="card-body">
+          <h1 class="headline">
+            <img src="Assets/Vector 1.png" alt="" class="icon-folder" />
+            <span>Insert Youtube Playlist Link to Start</span>
+          </h1>
+
+          <div class="input-row">
+            <img src="Assets/Vector 2.png" width="40px" alt="" class="icon-input" />
+            <input id="playlistUrl" type="url" placeholder="Youtube Playlist URL…" aria-label="Playlist URL" />
+          </div>
+
+          <div class="cta">
+            <button id="importBtn" class="btn-primary" type="button">Start!</button>
+          </div>
+
+          <div id="importStatus" style="text-align:center;margin-top:10px;color:#333;"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bottom"><div class="ad-728x90">Ad</div></footer>
+
+    <div class="coffee-wrap">
+      <script
+        type="text/javascript"
+        src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
+        data-name="bmc-button"
+        data-slug="yeetstudio"
+        data-color="#FFDD00"
+        data-text="Buy me a coffee">
+      </script>
+    </div>
+  </div>
+
+  <script src="js/import-playlist.js"></script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+/* ===== Theme ===== */
+:root{
+  --bg:#2f2f2f; --panel:#fff5e6; --ink:#0b0b0b;
+  --head:#f49a93; --border:#111; --radius:10px;
+  --shadow:0 6px 0 #000, 0 16px 32px rgba(0,0,0,.35);
+  --peek-red:#FF7071;   /* แผ่นบน */
+  --peek-pink:#f4aaa2;  /* แผ่นล่าง */
+  --reveal:0%;        
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+
+/* ===== Grid: 60 | 160 | center | 160 | 60 ===== */
+.page{
+  min-height:100dvh; display:grid;
+  grid-template-columns:60px 160px minmax(340px,1fr) 160px 60px;
+  grid-template-rows:auto auto 1fr auto; /* header / topcenter / center / footer */
+  gap:0;
+}
+
+/* Logo + Ads */
+.brand{ grid-column:1/6; text-align:center; margin:12px 0 8px; }
+.brand-img{ height:56px; width:auto; }
+.ad-left{ grid-column:2; grid-row:3; display:flex; justify-content:center; }
+.ad-right{ grid-column:4; grid-row:3; display:flex; justify-content:center; }
+.ad-160x600{
+  width:160px; height:600px; background:#f0f0f0;
+  border:2px solid #d6d6d6; border-radius:6px;
+  display:flex; align-items:center; justify-content:center; font-weight:800; color:#3a3a3a;
+}
+
+/* Card */
+.center{ grid-column:3; grid-row:3; display:flex; justify-content:center; align-items:flex-start;  }
+
+.topcenter{
+  height:30px; width:auto;
+  grid-column: 3;
+  grid-row: 2;
+  display:flex; align-items:center; justify-content:center;
+}
+.lead{ 
+    font-size: 24px;
+    text-align: center;
+    color: #fff; 
+}
+
+.card{
+  width:min(900px,94%); background:var(--panel);
+  border:3px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); overflow:visible;
+}
+.card-head{
+  background:var(--head); border-bottom:3px solid var(--border);
+  padding:10px 14px; display:flex; align-items:center; justify-content:space-between; font-weight:800;
+}
+.card-body{ padding:16px 18px 24px; position:relative; transition:padding-bottom 160ms ease; }
+
+
+/* ===== Player Stack (responsive, ratio fixed 625:350) ===== */
+.player-stack{
+  position:relative;
+  width:clamp(320px,92vw,720px);
+  aspect-ratio:16/9;
+  margin:10px auto 16px;
+  max-height:65vh;
+}
+.yt-layer, .yt-layer iframe, .mask-layer{ position:absolute; inset:0; }
+.yt-layer iframe{
+  width:100%; height:100%; display:block;
+  border:3px solid var(--border); border-radius:10px; background:#000;
+}
+
+/* Overlay layer */
+.mask-layer{ 
+    z-index:5; 
+    pointer-events:none; 
+}     /* ให้คลิกทะลุได้ */
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+/* Toggle icons */
+.toggle{
+  pointer-events:auto;                                /* ปุ่มยังคลิกได้ */
+  position:absolute;
+  left:calc(-1 * clamp(28px,5vw,40px));
+  width:clamp(28px,5vw,40px);
+  height:clamp(28px,5vw,40px);
+  cursor:pointer; display:grid; place-items:center;
+}
+.toggle .icon{ width:100%; height:100%; display:none; object-fit:contain; padding-right: 10px;}
+#toggleView:not(:checked) ~ .eye-top .off,
+#toggleSkip:not(:checked) ~ .eye-bottom .off{ display:block; }
+#toggleView:checked ~ .eye-top .on,
+#toggleSkip:checked ~ .eye-bottom .on{ display:block; }
+
+/* ตำแหน่งไอคอน: กลางแผ่นบน/ล่าง */
+.eye-top   { top: calc(6% - (clamp(28px,5vw,40px)/2)); }
+.eye-bottom{ top: calc(76% + (10% - (clamp(28px,5vw,40px)/2))); } /* กลางของพื้นที่ล่าง 20% */
+
+
+/* Overlay panes absolute, will be positioned by JS to follow yt-layer */
+.pane-abs {
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:calc(100% - 32px);
+  box-sizing:border-box;
+  border:3px solid var(--border);
+  border-radius:10px;
+  box-shadow:0 6px 0 rgba(0,0,0,0.35);
+  color:#fff; font-weight:800; display:flex; align-items:center; justify-content:flex-start;
+  z-index:40; pointer-events:auto;
+}
+.pane-abs .pane-inner { padding:12px 14px; }
+
+/* colors */
+.pane-top { background:var(--peek-red); }
+.pane-bottom { background:var(--peek-pink); }
+
+/* small hidden helper */
+.pane-abs.hidden { display:none !important; }
+
+/* Overlays — 80/20 และไม่ทับกัน */
+.pane{
+  position:absolute; left:0; right:0; 
+  border:3px solid var(--border); border-radius:10px; box-shadow:0 3px 0 var(--border);
+  color:#fff; font-weight:800; letter-spacing:.2px; display:flex; align-items:flex-start;
+}
+.pane span{ padding:8px 12px; text-shadow:0 2px 0 rgba(0,0,0,.35); }
+
+/* แผ่นบน: ครอบ 0 → 80% (หยุดก่อนแผ่นล่าง) */
+.pane-view{
+  top:0; bottom:25%;           /* แทนที่จะกำหนดด้วย height ใช้ bottom แบ่งพื้นที่ */
+  background:var(--peek-red); opacity:1;
+}
+/* แผ่นล่าง: เริ่มจาก 20% ลงมา และเว้น reveal ให้เห็น player ด้านล่าง */
+.pane-skip{
+  top:75%; bottom:0;
+  background:var(--peek-pink); opacity:1;
+}
+
+/* Toggle -> ซ่อน overlay เพื่อ peek */
+#toggleView:checked ~ .pane-view{ display:none; }
+#toggleSkip:checked ~ .pane-skip{ display:none; }
+
+/* Answer + Actions */
+.answer{ width:clamp(320px,92vw,625px); margin:12px auto 10px; }
+.answer input{ width:100%; padding:12px 14px; border:3px solid var(--border); border-radius:8px; font:inherit; background:#fff; }
+.actions{ display:flex; gap:18px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+.btn{ padding:16px 42px; border-radius:8px; border:3px solid var(--border); font-weight:800; letter-spacing:.2px; background:#fff; box-shadow:0 3px 0 var(--border); }
+.btn.primary{ background:#f28b82; }
+
+/* Play 10 s. button */
+.play10-wrap{
+  display:flex;
+  justify-content:center;
+  margin: 10px 0 12px;
+}
+
+.btn.ten{
+  background:var(--peek-red);
+  border:3px solid var(--border);
+  box-shadow:0 3px 0 var(--border);
+  padding:12px 28px;
+  border-radius:8px;
+  font-weight:800;
+  letter-spacing:.2px;
+}
+
+.btn.ten:active{
+  transform: translateY(1px);
+  box-shadow:0 2px 0 var(--border);
+}
+
+.btn.ten[disabled]{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+
+/* make header image link and brand text link look unchanged */
+.brand a, .brand-title-link {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;       /* keep same color as surrounding text */
+}
+
+.brand-img {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* ensure the top title link doesn't show underline and keeps layout */
+.brand-title-link .lead {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* optional: slightly increase touch target on mobile */
+.brand a img {
+  padding: 6px;
+  border-radius: 6px;
+}
+
+/* if your site uses :hover focus styles, keep accessible focus */
+.brand a:focus, .brand-title-link:focus {
+  outline: 3px solid rgba(15, 126, 230, 0.25);
+  outline-offset: 2px;
+}
+
+
+/* Bottom ad */
+.bottom{ grid-column:3; grid-row:4; display:flex; justify-content:center; align-items:center; margin:18px 0 70px; }
+.ad-728x90{ width:728px; max-width:92vw; height:90px; background:#f0f0f0; border:2px solid #d6d6d6; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:800; color:#3a3a3a; }
+
+/* Coffee */
+.coffee-wrap{ position:fixed; right:18px; bottom:18px; z-index:20; }
+
+/* Responsive adjustments */
+@media (max-width:1100px){
+  .page{ grid-template-columns:20px 0 1fr 0 20px; }
+  .ad-left,.ad-right{ display:none; }
+  .player-stack { width: 90%;}
+  .lead{font-size: 21px;}
+}
+@media (max-width:650px){
+  .card { width: calc(100vw - 28px); border-radius: 8px; }
+  .player-stack { width: 90%; min-height: 180px; max-height: 320px; aspect-ratio:16/9; }
+  .yt-layer iframe { border-radius: 8px; min-height: 180px; max-height: 240px; }
+  .pane-abs { width: calc(100% - 24px); }
+  .btn { padding: 10px 18px; }
+  .btn.ten { padding: 10px 14px; font-size: 14px; }
+  .lead{font-size: 18px;}
+}
+

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TubeTen — Play</title>
+  <link rel="stylesheet" href="play.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* small additions for modal and input; you can move to play.css */
+    .tt-modal-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999;
+    }
+    .tt-modal { background:#fff; padding:22px; border-radius:10px; width:90%; max-width:420px; text-align:center; box-shadow:0 12px 40px rgba(0,0,0,0.45); }
+    .tt-modal h3{ margin:0 0 8px; font-size:20px; }
+    .tt-modal p{ margin:8px 0 14px; color:#333; }
+    .tt-modal .ok { background:#0f7fe6; color:#fff; border:none; padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer; }
+    /* style for input/datalist area */
+    #answerInput { width:100%; padding:10px 12px; border-radius:8px; border:2px solid #111; font-size:16px; }
+    .controls-compact { display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+    .controls-compact button { padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="page">
+<header class="brand">
+  <a href="https://yeetstudio.work" target="_blank" rel="noopener" aria-label="Go to YEET studio">
+    <img src="Assets/logo-lands.png" width="180" alt="YEET logo" class="brand-img" />
+  </a>
+</header>
+
+<aside class="ad-left"><div class="ad-160x600">Ad</div></aside>
+<aside class="ad-right"><div class="ad-160x600">Ad</div></aside>
+
+<main class="topcenter">
+  <a href="tubeten.html" class="brand-title-link" aria-label="Go to TubeTen start page">
+    <p class="lead">TubeTen : Youtube Video Guessing</p>
+  </a>
+</main>
+
+
+    <main class="center">
+      <section class="card">
+        <div class="card-head">
+          <div id="qLabel" class="q">Q. <b id="uiIndex">0</b> / <span id="uiTotal">0</span></div>
+          <div class="score">Score: <b id="uiScore">0</b></div>
+        </div>
+
+        <div class="card-body">
+
+          <div class="player-stack">
+          <!-- Layer 1: YouTube -->
+
+            <div class="yt-layer" aria-label="YouTube Layer" >
+              <div id="player" style="width:100%; height:100%;"></div>
+            </div>
+
+          <!-- Layer 2: Two panes + toggle icons -->
+            <div class="mask-layer" aria-hidden="true">
+              <input type="checkbox" id="toggleView" class="sr-only">
+              <label for="toggleView" class="toggle eye-top" title="Peek to View Video">
+                <img class="icon off" src="Assets/toggle-off.png" alt="">
+                <img class="icon on"  src="Assets/toggle-on.png"  alt="">
+              </label>
+              <div class="pane pane-view"><span>Peek to View Video</span></div>
+
+              <input type="checkbox" id="toggleSkip" class="sr-only">
+              <label for="toggleSkip" class="toggle eye-bottom" title="Peek to Skip Ad">
+                <img class="icon off" src="Assets/toggle-off.png" alt="">
+                <img class="icon on"  src="Assets/toggle-on.png"  alt="">
+              </label>
+              <div class="pane pane-skip"><span>Peek to Skip Ad</span></div>
+            </div>
+
+          </div>
+
+
+            <!-- Play 10s + small pause -->
+            <div class="play10-wrap" style="display:flex;gap:8px;justify-content:center;align-items:center;">
+              <button id="btnPlay10" class="btn ten">Play random 10s</button>
+              <button id="btnPauseSmall" class="btn" title="Pause/Resume" style="padding:10px 12px;border-radius:8px;">⏸</button>
+            </div>
+
+
+          <div style="margin-top:12px;">
+            <!-- searchable dropdown: datalist (populated by JS) -->
+            <input id="answerInput" list="titlesList" placeholder="Answer Here..." autocomplete="off" />
+            <datalist id="titlesList"></datalist>
+            <div style="font-size:12px;color:#aaa;margin-top:6px;text-align:center;">Type to search from the lists</div>
+          </div>
+
+          <div class="controls-compact" aria-hidden="false">
+            <button id="btnSkip" class="btn ghost">Skip</button>
+            <button id="btnConfirm" class="btn primary">Confirm</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bottom"><div class="ad-728x90">Ad</div></footer>
+    
+  </div>
+
+      
+
+  <!-- Modal container (hidden by default; populated/shown by JS) -->
+  <div id="ttModalRoot" style="display:none;"></div>
+
+  <!-- YouTube IFrame API script will be loaded by play.js with retry logic -->
+  <script src="js/play.js"></script>
+</body>
+</html>

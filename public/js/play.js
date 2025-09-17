@@ -109,15 +109,41 @@ function playRandom10s(){
   }catch(e){ console.warn(e); }
 }
 function pauseToggle(){ if(!YT_PLAYER) return; const s = YT_PLAYER.getPlayerState(); if(s===YT.PlayerState.PLAYING) YT_PLAYER.pauseVideo(); else YT_PLAYER.playVideo(); }
+
 function handleConfirm(){
   const val = (document.getElementById('answerInput').value||'').trim();
   const correct = normalizeTitle(POOL[currentIndex].title);
+  const vid = POOL[currentIndex].videoId || '';
+  const iframe = `
+    <div class="answer-embed">
+      <iframe
+        class="answer-iframe"
+        src="https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&autoplay=0&controls=1"
+        title="Answer preview"
+        allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+    </div>`;
+
   if(!val || normalizeTitle(val) !== correct) {
-    createModal('Wrong', `The answer is: "${POOL[currentIndex].title}"`, 'OK', ()=>{ document.getElementById('answerInput').value=''; goNext(false); });
+    createModal(
+      'Wrong',
+      `${iframe}<p class="answer-text">The answer is: "<strong>${POOL[currentIndex].title}</strong>"</p>`,
+      'Next Video',
+      ()=>{ document.getElementById('answerInput').value=''; goNext(false); }
+    );
   } else {
-    score++; createModal('Correct! 🎉', `"${POOL[currentIndex].title}"`, 'OK', ()=>{ document.getElementById('answerInput').value=''; goNext(false); });
+    score++;
+    createModal(
+      'Correct! 🎉',
+      `${iframe}<p class="answer-text">"<strong>${POOL[currentIndex].title}</strong>"</p>`,
+      'Next Video',
+      ()=>{ document.getElementById('answerInput').value=''; goNext(false); }
+    );
   }
 }
+
+
 function handleSkip(){ goNext(false); }
 function goNext(auto=false){
   if(play10Timer){ clearTimeout(play10Timer); play10Timer = null; }
@@ -131,7 +157,28 @@ function goNext(auto=false){
 function loadCurrent(){ updateUI(); const it = POOL[currentIndex]; if(!it) return; createOrLoadPlayer(it.videoId); }
 
 /* modal helper */
-function createModal(title,message,cbText='OK',cb){ const root=document.getElementById('ttModalRoot'); root.innerHTML=''; const bg=document.createElement('div'); bg.className='tt-modal-backdrop'; const m=document.createElement('div'); m.className='tt-modal'; m.innerHTML=`<h3>${title}</h3><p>${message}</p>`; const b=document.createElement('button'); b.className='ok'; b.textContent=cbText; b.addEventListener('click',()=>{ root.style.display='none'; root.innerHTML=''; if(cb) cb(); }); m.appendChild(b); bg.appendChild(m); root.appendChild(bg); root.style.display='block'; }
+function createModal(title,message,cbText='OK',cb)
+{ 
+  const root=document.getElementById('ttModalRoot'); 
+        root.innerHTML=''; 
+  const bg=document.createElement('div'); 
+        bg.className='tt-modal-backdrop'; 
+  const m=document.createElement('div'); 
+        m.className='tt-modal'; 
+        m.innerHTML=`<h3>${title}</h3><p>${message}</p>`; 
+  const b=document.createElement('button'); 
+        b.className='btn ten'; 
+        b.textContent=cbText; 
+        b.addEventListener('click',()=>{ 
+          root.style.display='none'; 
+          root.innerHTML=''; 
+          if(cb) cb(); 
+        }); 
+        m.appendChild(b); 
+        bg.appendChild(m); 
+        root.appendChild(bg); 
+        root.style.display='block'; 
+}
 
 /* --- UI wiring --- */
 function wireUI(){

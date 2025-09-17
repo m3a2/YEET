@@ -166,6 +166,7 @@ body{ margin:0; background:var(--bg); color:var(--ink);
   border-radius:8px;
   font-weight:800;
   letter-spacing:.2px;
+  color: #333;
 }
 
 .btn.ten:active{
@@ -176,6 +177,16 @@ body{ margin:0; background:var(--bg); color:var(--ink);
 .btn.ten[disabled]{
   opacity:.6;
   cursor:not-allowed;
+}
+
+.icon-pause{
+  width:16px;
+  height:auto;
+}
+
+.btn:active{
+  transform: translateY(1px);
+  box-shadow:0 2px 0 var(--border);
 }
 
 
@@ -232,5 +243,84 @@ body{ margin:0; background:var(--bg); color:var(--ink);
   .btn { padding: 10px 18px; }
   .btn.ten { padding: 10px 14px; font-size: 14px; }
   .lead{font-size: 18px;}
+}
+
+/* ==== Button link reset (prevent underline + color change) ==== */
+.btn,
+.btn:link,
+.btn:visited,
+.btn:hover,
+.btn:active,
+.btn:focus {
+  text-decoration: none;
+  color: inherit;           /* keep whatever color the button sets */
+}
+
+/* Explicit colors so they don't change after click */
+.btn { color: var(--ink); }                 /* default buttons on white bg */
+.btn.primary, .btn.ten { color: #fff; }     /* colored buttons keep white text */
+
+/* Keep disabled style consistent */
+.btn[disabled],
+.btn[disabled]:hover,
+.btn[disabled]:active {
+  text-decoration: none;
+  color: inherit;
+  cursor: not-allowed;
+}
+
+/* Mobile: remove tap highlight on anchors */
+a.btn, button.btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Accessible focus ring */
+.btn:focus-visible {
+  outline: 3px solid rgba(15,126,230,.35);
+  outline-offset: 2px;
+}
+
+/* (optional) make sure inner spans/icons don't reintroduce underline */
+.btn * { text-decoration: none !important; }
+
+/* ===== Disabled buttons: visual + behavior ===== */
+/* ครอบคลุมทั้ง <button disabled> และ <a aria-disabled="true"> */
+.btn[disabled],
+.btn:disabled,
+a.btn[aria-disabled="true"] {
+  opacity: .45;                /* จางลงให้เห็นชัดว่ากดไม่ได้ */
+  filter: grayscale(15%);      /* ลดความสดของสีเล็กน้อย */
+  cursor: not-allowed;
+  pointer-events: none;        /* กัน hover/active/คลิก */
+  box-shadow: 0 0 0 var(--border) !important; /* ตัดเงานูนให้ดูไม่ active */
+  transform: none !important;  /* กันเอฟเฟกต์กดเด้ง */
+  text-decoration: none;       /* กันขีดเส้นใต้ */
+  color: inherit;              /* คงสีตัวอักษร */
+}
+
+/* ถ้าตัวพื้นหลังเป็นสี (เช่น .primary / .ten) ยังกัน hover/active ไว้ */
+.btn.primary[disabled],
+.btn.primary:disabled,
+.btn.ten[disabled],
+.btn.ten:disabled {
+  opacity: .5;
+}
+
+/* ป้องกัน state hover/active เปลี่ยนหน้าตาปุ่มที่ถูก disable */
+.btn[disabled]:hover,
+.btn[disabled]:active,
+.btn:disabled:hover,
+.btn:disabled:active,
+a.btn[aria-disabled="true"]:hover,
+a.btn[aria-disabled="true"]:active {
+  pointer-events: none;
+  box-shadow: 0 0 0 var(--border) !important;
+  transform: none !important;
+}
+
+/* Modal title color for Wrong/Correct */
+.tt-modal h3{
+  color: var(--peek-red, #FF7071);
+  font-weight: 900;
 }
 

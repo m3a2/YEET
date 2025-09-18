@@ -1,20 +1,26 @@
-// server.js
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
 // CORS
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || '*'
-}));
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 
-// Rate limit
+// Limit
 app.use(rateLimit({ windowMs: 60 * 1000, max: 30 }));
+
+// ==== เสิร์ฟไฟล์ static จาก public/ ====
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 // ====== YouTube API ======
 const API_KEY = process.env.YOUTUBE_API_KEY;

@@ -21,6 +21,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, 'public')));
 
+// เสิร์ฟ tubeten.html เมื่อเข้า root /
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tubeten.html'));
+});
+
+// ถ้าอยากให้ทุก path ที่ไม่ใช่ /api/* กลับไปหน้าเดียวกัน (SPA fallback)
+app.get(/^\/(?!api\/).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tubeten.html'));
+});
 
 // ====== YouTube API ======
 const API_KEY = process.env.YOUTUBE_API_KEY;

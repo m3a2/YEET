@@ -1,244 +1,167 @@
-/* ===== Theme ===== */
 :root{
-  --bg:#2f2f2f;
-  --panel:#fff7e6;
-  --ink:#0b0b0b;
-  --blue:#2d6ecf;
-  --border:#111;
-  --shadow: 0 6px 0 #000, 0 16px 32px rgba(0,0,0,.35);
-  --radius:10px;
+  --bg:#2f2f2f;            /* พื้นหลังเทาเข้ม */
+  --panel:#222;            /* กรอบ/การ์ด */
+  --ink:#eaeaea;           /* ตัวหนังสือหลัก */
+  --muted:#bdbdbd;         /* ตัวหนังสือรอง */
+  --line:#ffffff;          /* เส้นแบ่ง */
+  --accent:#e65b57;        /* เน้น (ปุ่ม/หัวเรื่อง) */
+  --radius:0px;
+  --gap:18px;
+  --maxw:1080px;
 }
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:16px/1.6 "Inter",system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
 }
 
-/* ===== Layout: 60 | 160 | center | 160 | 60 ===== */
 .page{
-  min-height:100dvh;
-  display:grid;
-  grid-template-columns: 60px 160px minmax(320px, 1fr) 160px 60px;
-  grid-template-rows: auto 1fr auto;
-  column-gap: 0;
-  row-gap: 0;
+  max-width:var(--maxw);
+  margin:24px auto 56px;
+  padding:0 16px;
 }
 
-/* Logo */
-.brand{
-  grid-column: 1 / 6;
-  text-align:center;
-  margin: 22px 0 14px;
-}
-.brand-img{ height:56px; width:auto; }
-
-/* Side ads */
-.ad-left  { grid-column: 2; grid-row: 2; display:flex; justify-content:center; }
-.ad-right { grid-column: 4; grid-row: 2; display:flex; justify-content:center; }
-.ad-160x600{
-  width:160px; height:600px;
-  background:#f0f0f0; border:2px solid #d6d6d6; border-radius:6px;
-  display:flex; align-items:center; justify-content:center; font-weight:800; color:#3a3a3a;
-}
-
-/* Center card */
-.topcenter{
-  height:24px; width:auto;
-  grid-column: 3;
-  grid-row: 2;
-  display:flex; align-items:center; justify-content:center;
-}
-
-.center{
-  grid-column: 3;
-  grid-row: 2;
-  display:flex; align-items:center; justify-content:center;
-}
 .card{
-  width: min(760px, 92%);
-  background: var(--panel);
-  border:3px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.card-title{
-  background: var(--blue);
-  color:#fff; font-weight:800;
-  padding: 10px 14px;
-  border-bottom: 3px solid var(--border);
-  letter-spacing:.2px;
-}
-.card-body{
-  padding: 24px 24px 20px;
-  text-align: left;   /* ตัวอักษรชิดซ้าย แต่ทั้งการ์ดถูกจัดกึ่งกลางโดย .center */
+  border:3px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--panel);
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
 }
 
-/* RESULT */
-/* RESULT */
-/* RESULT */
-.result-card-body{
-  padding:36px 36px 46px;
-  text-align:center;
-  position:relative;
-}
-
-/* Icon (ใช้ img จาก assets) */
-.icon-wrap{
-  width:120px;
-  height:120px;
-  margin:0 auto 10px;
+/* ===== Brand Header ===== */
+.brand{
   display:flex;
   align-items:center;
-  justify-content:center;
+  justify-content:space-between;
+  padding:18px 24px;
+  gap:20px;
 }
-.icon-img{
-  width:70px;
+.brand-left{display:flex;align-items:center;gap:16px}
+.logo{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  font-weight:800;
+  font-size:44px;
+  letter-spacing:.5px;
+  text-decoration:none;
+}
+.logo .y{color:#ffd54f}      /* yellow */
+.logo .e1{color:#26c6da}     /* cyan */
+.logo .e2{color:#42a5f5}     /* blue */
+.logo .t{color:#ef5350}      /* red */
+
+.brand-img{ height:56px; width:auto; }
+
+.brand-text .studio{
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+}
+.brand-text .studio span{font-weight:700;opacity:.9}
+.brand-text .tagline{
+  margin:4px 0 0;
+  font-size:14px;
+  color:var(--muted);
+}
+
+.brand-right{
+  text-align:right;
+  min-width:210px;
+  border-left:3px solid var(--line);
+  padding-left:20px;
+}
+.brand-right .ver{font-weight:700}
+.brand-right .ver strong{color:#ff8a65}
+.brand-right .date{font-size:13px;color:var(--muted)}
+
+/* ===== Nav Buttons ===== */
+.nav{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  overflow:hidden;
+}
+.nav .btn{
+  display:flex;align-items:center;justify-content:center;
+  padding:16px 12px;
+  color:var(--ink);
+  text-decoration:none;
+  font-weight:700;
+  letter-spacing:.3px;
+  border-right:3px solid var(--line);
+  transition:background .2s, color .2s, transform .04s;
+}
+.nav .btn:last-child{border-right:none}
+.nav .btn:hover{background:#333}
+.nav .btn:active{transform:translateY(1px)}
+
+/* ===== Hero ===== */
+.hero{
+  margin-top:18px;
+  overflow:hidden;
+}
+.hero-link{display:block}
+.hero img{
+  display:block;
+  width:100%;
   height:auto;
 }
 
-/* Subtitle */
-.result-sub{
-  margin:6px 0 16px;
-  font-size:20px;
-  font-weight:700;
-}
-
-/* Score */
-.score-wrap{
-  display:flex;
-  align-items:baseline;
-  justify-content:center;
-  gap:8px;
-  margin-bottom:22px;
-}
-.score-number{
-  font-size:72px;
-  color:var(--danger);
+/* ===== Projects ===== */
+.projects{margin-top:28px}
+.section-title{
+  text-align:center;
   font-weight:800;
-  line-height:1;
+  font-size:34px;
+  margin:6px 0 18px;
 }
-.score-total{
-  font-size:28px;
-  color:#222;
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:var(--gap);
+}
+.project{
+  overflow:hidden;
+}
+.project-link{display:block}
+.project img{
+  display:block;
+  width:100%;
+  height:auto;
+  transition:transform .4s ease;
+}
+.project:hover img{transform:scale(1.02)}
+
+/* ===== Footer ===== */
+.footer{
+  margin-top:28px;
+  text-align:center;
+  color:var(--muted);
+  font-size:14px;
+}
+.footer .divider{
+  height:2px;
+  background:var(--line);
   opacity:.9;
-  font-weight:800;
+  margin:10px 0 16px;
+  border-radius:3px;
 }
 
-/* HOME */
-/* HOME */
-/* HOME */
-.lead{ 
-    margin: 0px; 
-    font-size: 24px;
-    color: #fff; 
-        text-align: center;
+/* ===== Responsive ===== */
+@media (max-width:920px){
+  .brand{flex-direction:column;align-items:stretch}
+  .brand-right{border-left:none;border-right:none;border-top:3px solid var(--line);padding-left:0;padding-top:12px}
+
 }
-
-/* Headline + folder icon */
-.headline{
-  display:flex; align-items:center; gap:12px;
-  font-size:18px; margin:8px 0 12px; font-weight:800;
+@media (max-width:760px){
+  .nav{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}
+  .section-title{font-size:26px}
+  .logo{font-size:38px}
+    .nav .btn{border-right:none};
 }
-.icon-folder{ height:24px; width:auto; }
-
-/* Input row: icon outside input */
-.input-row{
-  display:flex; align-items:center; gap:10px;
-  margin: 6px 0 16px;
-}
-.icon-input{ height:28px; width:auto; flex:0 0 auto; }
-.input-row input{
-  flex: 1 1 auto;
-  font: inherit;
-  padding: 10px 14px;
-  border: 3px solid var(--ink);
-  border-radius: 6px;
-  background:#fff;
-  outline:none;
-}
-.input-row input::placeholder{ color:#9b9b9b; }
-
-/* CTA center */
-.cta{
-  display:flex; justify-content:center; margin-top: 8px;
-}
-
-.btn-primary{
-  display:inline-block;
-  background: var(--blue);
-  color:#fff; text-decoration:none;
-  border:3px solid var(--border);
-  padding: 12px 28px;
-  border-radius: 6px;
-  font-weight: 800; font-size:18px;
-  letter-spacing: .2px;
-  box-shadow: 0 3px 0 var(--border);
-}
-.btn-primary:active{ transform: translateY(1px); box-shadow: 0 2px 0 var(--border); }
-
-
-/* make header image link and brand text link look unchanged */
-.brand a, .brand-title-link {
-  display: inline-block;
-  text-decoration: none;
-  color: inherit;       /* keep same color as surrounding text */
-}
-
-.brand-img {
-  vertical-align: middle;
-  display: inline-block;
-}
-
-/* ensure the top title link doesn't show underline and keeps layout */
-.brand-title-link .lead {
-  margin: 0;
-  cursor: pointer;
-}
-
-/* optional: slightly increase touch target on mobile */
-.brand a img {
-  padding: 6px;
-  border-radius: 6px;
-}
-
-/* if your site uses :hover focus styles, keep accessible focus */
-.brand a:focus, .brand-title-link:focus {
-  outline: 3px solid rgba(15, 126, 230, 0.25);
-  outline-offset: 2px;
-}
-
-
-
-/* Bottom ad 728×90 */
-.bottom{
-  grid-column: 3;
-  grid-row: 3;
-  display:flex; justify-content:center; align-items:center;
-  margin: 28px 0 70px;
-}
-.ad-728x90{
-  width:728px; height:90px;
-  background:#f0f0f0; border:2px solid #d6d6d6; border-radius:6px;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:800; color:#3a3a3a;
-}
-
-/* Buymeacoffee — fixed bottom-right */
-.coffee-wrap{
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 20;
-}
-
-/* Responsive: ซ่อน side ads บนจอแคบ */
-@media (max-width: 1100px){
-  .page{
-    grid-template-columns: 20px 0 1fr 0 20px; /* เหลือแค่ margin ซ้ายขวา */
-  }
-  .ad-left, .ad-right{ display:none; }
-  .ad-728x90{ max-width: 92vw; width: 92vw; }
-}
-

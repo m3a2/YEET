@@ -14,37 +14,39 @@ const app = express();
 app.use(express.json());
 
 // CORS
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || '*'
-}));
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 
 // Rate limit
-app.use(rateLimit({
-  windowMs: 60 * 1000,
-  max: 30
-}));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 30 }));
 
-/* ---------- Static files & routes for pages ---------- */
+/* ---------- Static files & host-aware routes ---------- */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// เสิร์ฟไฟล์ใน public/ (เข้าถึง /privacy.html ได้ตรง ๆ ด้วย)
+// เสิร์ฟ asset จาก public/
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
 
-// หน้า Landing ที่ root
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+// helper: เช็คว่าเป็น subdomain tubeten หรือไม่
+function isTubeTenHost(hostname = '') {
+  return String(hostname).toLowerCase().startsWith('tubeten.');
+}
+
+// root: เสิร์ฟตาม host
+app.get('/', (req, res) => {
+  if (isTubeTenHost(req.hostname)) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'tubeten.html'));
+  }
+  return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-// หน้าเกม
-app.get('/tubeten', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'tubeten.html'));
-});
-
-// เผื่ออยากเข้าผ่าน /privacy (ไม่จำเป็นต้องมีถ้าเรียก privacy.html ตรง ๆ)
-app.get('/privacy', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'));
+// privacy: ให้ใช้ที่โดเมนหลักเท่านั้น
+app.get('/privacy', (req, res) => {
+  if (isTubeTenHost(req.hostname)) {
+    // redirect ไปโดเมนหลัก
+    return res.redirect(302, 'https://yeetstudio.work/privacy');
+  }
+  return res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'));
 });
 
 // health check
@@ -56,7 +58,6 @@ if (!API_KEY) {
   console.warn('Warning: YOUTUBE_API_KEY not set in env');
 }
 
-// helper: extract playlistId
 function extractPlaylistId(urlOrId) {
   if (!urlOrId) return null;
   if (/^(PL|UU|FL|LL|RD|OL)[A-Za-z0-9_-]+$/.test(urlOrId)) return urlOrId;
@@ -64,14 +65,15 @@ function extractPlaylistId(urlOrId) {
   return m ? m[1] : null;
 }
 
-// fetch all playlist items (paginated)
 async function fetchPlaylistItems(playlistId) {
   const items = [];
   let pageToken = '';
   const base = 'https://www.googleapis.com/youtube/v3/playlistItems';
 
   while (true) {
-    const url = `${base}?part=snippet&maxResults=50&playlistId=${encodeURIComponent(playlistId)}&key=${API_KEY}${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const url =
+      `${base}?part=snippet&maxResults=50&playlistId=${encodeURIComponent(playlistId)}&key=${API_KEY}` +
+      (pageToken ? `&pageToken=${pageToken}` : '');
     const res = await fetch(url);
     if (!res.ok) {
       const text = await res.text();
@@ -97,7 +99,6 @@ async function fetchPlaylistItems(playlistId) {
   return items;
 }
 
-// fetch video details (contentDetails) in batches of 50
 async function fetchVideoDetails(videoIds) {
   const result = {};
   const base = 'https://www.googleapis.com/youtube/v3/videos';
@@ -123,7 +124,6 @@ async function fetchVideoDetails(videoIds) {
   return result;
 }
 
-// In-memory pool
 const pools = {}; // { playlistId: [ {videoId, title, thumbnails, duration, addedAt} ] }
 
 app.post('/api/import-playlist', async (req, res) => {
@@ -167,5 +167,5 @@ app.get('/api/pool/:playlistId', (req, res) => {
 });
 
 /* ---------- Start ---------- */
-const PORT = process.env.PORT || 4000; // Render จะเซ็ต PORT ให้มาเอง
+const PORT = process.env.PORT || 4000; // Render จะเซ็ต PORT ให้เอง
 app.listen(PORT, () => console.log('Server running on port', PORT));

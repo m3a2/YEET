@@ -18,31 +18,49 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
-
-function isTubeTenHost(hostname = '') {
-  return String(hostname).toLowerCase().startsWith('tubeten.');
+// -------------------- Host helpers --------------------
+function isTubeTenHost(host = '') {
+  const h = String(host || '').toLowerCase();
+  return h.startsWith('tubeten.');
+}
+function getHost(req) {
+  // Render/Proxy จะส่ง x-forwarded-host มาให้ ใช้ค่านี้ก่อน
+  return req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '';
 }
 
-// root: เสิร์ฟตาม host
+// -------------------- Host-aware routes (มาก่อน static) --------------------
 app.get('/', (req, res) => {
-  if (isTubeTenHost(req.hostname)) {
+  const host = getHost(req);
+  if (isTubeTenHost(host)) {
     return res.sendFile(path.join(PUBLIC_DIR, 'tubeten.html'));
   }
   return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-// privacy: ให้ใช้ที่โดเมนหลักเท่านั้น
 app.get('/privacy', (req, res) => {
-  if (isTubeTenHost(req.hostname)) {
+  const host = getHost(req);
+  if (isTubeTenHost(host)) {
+    // ให้ใช้ privacy เฉพาะโดเมนหลัก
     return res.redirect(302, 'https://yeetstudio.work/privacy');
   }
   return res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'));
 });
 
+// บนโดเมนหลัก ถ้าเข้าทาง /tubeten ให้เด้งไป subdomain ที่ถูกต้อง
+app.get('/tubeten', (_req, res) => {
+  res.redirect(302, 'https://tubeten.yeetstudio.work');
+});
+
+// -------------------- Static (มา "หลัง" route ข้างบน) --------------------
+app.use(express.static(PUBLIC_DIR, {
+  index: false,               // กัน static เสิร์ฟ index.html เองก่อนเรา
+  extensions: ['html'],
+}));
+
+// health check
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// ---------------- YouTube API (ใช้ fetch แบบ native) ----------------
+// ==================== YouTube API (native fetch) ====================
 const API_KEY = process.env.YOUTUBE_API_KEY;
 if (!API_KEY) console.warn('Warning: YOUTUBE_API_KEY not set in env');
 
@@ -137,5 +155,6 @@ app.get('/api/pool/:playlistId', (req, res) => {
   res.json({ playlistId: req.params.playlistId, count: pool.length, items: pool });
 });
 
-const PORT = process.env.PORT || 4000;
+// -------------------- Start --------------------
+const PORT = process.env.PORT || 4000; // Render จะกำหนด PORT ให้เอง
 app.listen(PORT, () => console.log('Server running on port', PORT));

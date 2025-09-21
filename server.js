@@ -1,7 +1,6 @@
 // server.js
-// npm i express node-fetch cors express-rate-limit dotenv
+// npm i express cors express-rate-limit dotenv
 import express from 'express';
-import fetch from 'node-fetch';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
@@ -12,22 +11,15 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-
-// CORS
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
-
-// Rate limit
 app.use(rateLimit({ windowMs: 60 * 1000, max: 30 }));
 
-/* ---------- Static files & host-aware routes ---------- */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// เสิร์ฟ asset จาก public/
 app.use(express.static(PUBLIC_DIR, { extensions: ['html'] }));
 
-// helper: เช็คว่าเป็น subdomain tubeten หรือไม่
 function isTubeTenHost(hostname = '') {
   return String(hostname).toLowerCase().startsWith('tubeten.');
 }
@@ -43,20 +35,16 @@ app.get('/', (req, res) => {
 // privacy: ให้ใช้ที่โดเมนหลักเท่านั้น
 app.get('/privacy', (req, res) => {
   if (isTubeTenHost(req.hostname)) {
-    // redirect ไปโดเมนหลัก
     return res.redirect(302, 'https://yeetstudio.work/privacy');
   }
   return res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'));
 });
 
-// health check
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
-/* ---------- YouTube API (ของเดิม) ---------- */
+// ---------------- YouTube API (ใช้ fetch แบบ native) ----------------
 const API_KEY = process.env.YOUTUBE_API_KEY;
-if (!API_KEY) {
-  console.warn('Warning: YOUTUBE_API_KEY not set in env');
-}
+if (!API_KEY) console.warn('Warning: YOUTUBE_API_KEY not set in env');
 
 function extractPlaylistId(urlOrId) {
   if (!urlOrId) return null;
@@ -69,19 +57,14 @@ async function fetchPlaylistItems(playlistId) {
   const items = [];
   let pageToken = '';
   const base = 'https://www.googleapis.com/youtube/v3/playlistItems';
-
   while (true) {
-    const url =
-      `${base}?part=snippet&maxResults=50&playlistId=${encodeURIComponent(playlistId)}&key=${API_KEY}` +
-      (pageToken ? `&pageToken=${pageToken}` : '');
+    const url = `${base}?part=snippet&maxResults=50&playlistId=${encodeURIComponent(
+      playlistId
+    )}&key=${API_KEY}${pageToken ? `&pageToken=${pageToken}` : ''}`;
     const res = await fetch(url);
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`YT playlistItems failed: ${res.status} ${text}`);
-    }
+    if (!res.ok) throw new Error(`playlistItems ${res.status}`);
     const data = await res.json();
     if (!data.items) break;
-
     for (const it of data.items) {
       const vid = it?.snippet?.resourceId?.videoId;
       if (vid) {
@@ -100,31 +83,26 @@ async function fetchPlaylistItems(playlistId) {
 }
 
 async function fetchVideoDetails(videoIds) {
-  const result = {};
+  const out = {};
   const base = 'https://www.googleapis.com/youtube/v3/videos';
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50).join(',');
-    const url = `${base}?part=contentDetails,snippet&id=${batch}&key=${API_KEY}&maxResults=50`;
+    const url = `${base}?part=contentDetails,snippet&id=${batch}&key=${API_KEY}`;
     const res = await fetch(url);
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`YT videos failed: ${res.status} ${text}`);
-    }
+    if (!res.ok) throw new Error(`videos ${res.status}`);
     const data = await res.json();
-    if (data.items) {
-      for (const v of data.items) {
-        result[v.id] = {
-          duration: v.contentDetails?.duration,
-          title: v.snippet?.title,
-          thumbnails: v.snippet?.thumbnails
-        };
-      }
+    for (const v of data.items ?? []) {
+      out[v.id] = {
+        duration: v.contentDetails?.duration ?? null,
+        title: v.snippet?.title ?? null,
+        thumbnails: v.snippet?.thumbnails ?? null,
+      };
     }
   }
-  return result;
+  return out;
 }
 
-const pools = {}; // { playlistId: [ {videoId, title, thumbnails, duration, addedAt} ] }
+const pools = {}; // { playlistId: [...] }
 
 app.post('/api/import-playlist', async (req, res) => {
   try {
@@ -146,26 +124,18 @@ app.post('/api/import-playlist', async (req, res) => {
     }));
 
     pools[playlistId] = pool;
-
-    return res.json({
-      playlistId,
-      count: pool.length,
-      sample: pool.slice(0, 6),
-      message: 'imported',
-    });
+    res.json({ playlistId, count: pool.length, sample: pool.slice(0, 6) });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'server_error', detail: err.message });
+    res.status(500).json({ error: 'server_error', detail: err.message });
   }
 });
 
 app.get('/api/pool/:playlistId', (req, res) => {
-  const { playlistId } = req.params;
-  const pool = pools[playlistId];
+  const pool = pools[req.params.playlistId];
   if (!pool) return res.status(404).json({ error: 'not_found' });
-  res.json({ playlistId, count: pool.length, items: pool });
+  res.json({ playlistId: req.params.playlistId, count: pool.length, items: pool });
 });
 
-/* ---------- Start ---------- */
-const PORT = process.env.PORT || 4000; // Render จะเซ็ต PORT ให้เอง
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log('Server running on port', PORT));

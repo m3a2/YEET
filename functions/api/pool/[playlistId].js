@@ -1,4 +1,4 @@
-import { cors } from "../../../_lib/youtube.js";
+import { cors } from "../../_lib/youtube.js";
 
 export async function onRequest({ params, env, request }) {
   if (request.method === "OPTIONS") return cors("", 204);

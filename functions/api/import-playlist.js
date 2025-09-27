@@ -1,4 +1,4 @@
-import { extractPlaylistId, fetchPlaylistItems, fetchVideoDetails, cors } from "../../_lib/youtube.js";
+import { extractPlaylistId, fetchPlaylistItems, fetchVideoDetails, cors } from "../_lib/youtube.js";
 
 export async function onRequest(context) {
   const { request, env } = context;

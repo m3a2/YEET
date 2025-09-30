@@ -88,28 +88,6 @@ export async function onRequest(context) {
       cached: false
     }));
   } catch (e) {
-  const msg   = e?.message || String(e);
-  const name  = e?.name || 'Error';
-  const stack = e?.stack || '';
-
-  // log ใน Functions/Server logs (เปิดดูได้จากแดชบอร์ด)
-  console.error('[import] failed:', name, msg, stack);
-
-  // ส่งรายละเอียดกลับมาเพื่อดีบั๊กจาก Network tab
-  return new Response(JSON.stringify({
-    error: 'server_error',
-    name,
-    detail: msg,
-    stack
-  }), {
-    status: 500,
-    headers: {
-      'Content-Type': 'application/json',
-      // เผื่อ cors() เองมีปัญหา ให้ตั้ง CORS ตรงๆ ไปก่อน
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type,Authorization'
-    }
-  });
-}
+    return cors(JSON.stringify({ error: "server_error", detail: String(e.message || e) }), 500);
+  }
 }

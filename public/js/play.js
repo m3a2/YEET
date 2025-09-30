@@ -1,236 +1,235 @@
-/* public/js/play.js
- - No syncPanes / initPaneSync included (user handles CSS)
- - datalist randomized
- - session count from ?count= or full pool
- - YT cue (no autoplay), playRandom10s, pause, skip, confirm, modal
-*/
+/* public/js/play.js — rewritten robust version */
 
-let YT_PLAYER = null;
-let POOL = [];        // session items (the sequence the game will use)
-let POOL_FULL = [];   // full stored pool (used for datalist)
+// ---- Global-safe state (กัน error ถูกประกาศซ้ำ) ----
+window.YT_PLAYER = window.YT_PLAYER ?? null;
+let POOL = [];
+let POOL_FULL = [];
 let currentIndex = 0;
 let score = 0;
-let play10Timer = null;
 
-function qParam(name) { return new URLSearchParams(location.search).get(name); }
-function normalizeTitle(s) { return (s||'').trim().toLowerCase().replace(/\s+/g,' '); }
-function shuffleArray(a) { const b = a.slice(); for (let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]] } return b; }
+// ---- Helpers ----
+const $ = (id) => document.getElementById(id);
+const getPlaylistId = () => new URLSearchParams(location.search).get("playlist");
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-/* --- API helpers --- */
-async function fetchPoolFull(playlistId){
-  const r = await fetch(`/api/pool/${encodeURIComponent(playlistId)}`);
-  if(!r.ok){
-    const txt = await r.text();
-    throw new Error('pool not found: ' + txt);
+const normalizeItem = (it) => ({
+  videoId: it?.videoId || it?.id || it?.video_id || it?.video?.videoId || "",
+  title:   it?.title   || it?.name || it?.snippet?.title || ""
+});
+
+// ---- UI ----
+function updateUI() {
+  const q = $("uiQ");
+  const t = $("uiTotal");
+  const scoreEl = $("scoreVal");
+  if (q) q.textContent = POOL.length ? (currentIndex + 1) : 0;
+  if (t) t.textContent = POOL.length || 0;
+  if (scoreEl) scoreEl.textContent = score;
+}
+
+function populateDatalistRandom(items) {
+  const datalist = $("titleList");
+  if (!datalist) return;
+  datalist.innerHTML = "";
+  const shuffled = items.slice().sort(() => Math.random() - 0.5).slice(0, 100);
+  for (const it of shuffled) {
+    const opt = document.createElement("option");
+    opt.value = it.title || "";
+    datalist.appendChild(opt);
   }
-  const j = await r.json();
-  return j.items || [];
 }
 
-async function fetchSessionItems(playlistId, count){
-  const r = await fetch(`/api/play/${encodeURIComponent(playlistId)}?count=${encodeURIComponent(count)}`);
-  if(!r.ok) throw new Error('failed to load session items');
-  const j = await r.json();
-  return j.items || [];
+// ---- Backend calls ----
+async function fetchJSON(url) {
+  const r = await fetch(url, { credentials: "same-origin" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return r.json();
 }
 
-/* --- YT loader --- */
-let _ytReady = false;
-function ensureYouTubeApi(){
-  return new Promise((resolve,reject)=>{
-    if(window.YT && window.YT.Player){ _ytReady = true; return resolve(window.YT); }
-    window.onYouTubeIframeAPIReady = function(){ _ytReady = true; resolve(window.YT); };
-    if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){
-      const s = document.createElement('script'); s.src='https://www.youtube.com/iframe_api'; s.async=true; document.head.appendChild(s);
+async function fetchPoolFull(playlistId) {
+  try {
+    const data = await fetchJSON(`/api/pool/${encodeURIComponent(playlistId)}`);
+    const items = (data?.items || data || []).map(normalizeItem).filter(x => x.videoId);
+    return items;
+  } catch (e) {
+    console.warn("fetchPoolFull failed:", e);
+    return [];
+  }
+}
+
+async function fetchSessionItems(playlistId, count) {
+  try {
+    const data = await fetchJSON(`/api/play/${encodeURIComponent(playlistId)}?count=${count}`);
+    const arr = (data?.items || data || []).map(normalizeItem).filter(x => x.videoId);
+    return arr;
+  } catch (e) {
+    console.warn("fetchSessionItems failed:", e);
+    return [];
+  }
+}
+
+// ---- YouTube Iframe API bootstrap ----
+let ytReadyPromise;
+function ensureYouTubeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (ytReadyPromise) return ytReadyPromise;
+
+  ytReadyPromise = new Promise((resolve) => {
+    // onYouTubeIframeAPIReady อาจถูกประกาศแล้วในรอบก่อน
+    if (!window.onYouTubeIframeAPIReady) {
+      window.onYouTubeIframeAPIReady = () => resolve();
+    } else {
+      // ถ้ามีอยู่แล้ว ให้ resolve เมื่อไลบรารีโหลดเสร็จ
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { try { prev(); } catch {} resolve(); };
     }
-    setTimeout(()=> {
-      if(_ytReady) resolve(window.YT); else reject(new Error('YT API load timeout'));
-    }, 9000);
+
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.async = true;
+    document.head.appendChild(s);
+  });
+
+  return ytReadyPromise;
+}
+
+// ---- Player ----
+function createOrLoadPlayer(videoId) {
+  if (!videoId) return;
+  // cue บน player เดิมถ้ามี
+  if (window.YT_PLAYER && window.YT && window.YT.Player) {
+    try {
+      window.YT_PLAYER.cueVideoById(videoId);
+      return;
+    } catch (e) {
+      console.warn("cueVideoById failed; recreating player", e);
+    }
+  }
+
+  // สร้างใหม่
+  window.YT_PLAYER = new YT.Player("player", {
+    width: "100%",
+    height: "100%",
+    videoId,
+    playerVars: {
+      playsinline: 1,
+      rel: 0,
+      modestbranding: 1,
+      controls: 1
+    },
+    events: {
+      onReady: () => {},
+      onStateChange: () => {}
+    }
   });
 }
 
-/* --- Player create / cue (do not autoplay) --- */
-function createOrLoadPlayer(videoId){
-  if(!window.YT || !window.YT.Player) { console.warn('YT not ready'); return; }
-  if(YT_PLAYER){
-    try { YT_PLAYER.cueVideoById(videoId); } catch(e){ console.warn(e); }
+function loadCurrent() {
+  if (!POOL.length) return;
+  const it = POOL[currentIndex];
+  if (!it) return;
+  createOrLoadPlayer(it.videoId);
+  updateUI();
+}
+
+// ---- Controls (optional wiring, ปลอดภัยถ้า element ไม่มี) ----
+function bindControls() {
+  const pauseBtn = $("pauseBtn");
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", () => {
+      const P = window.YT_PLAYER;
+      if (!P || !P.pauseVideo || !P.playVideo || !P.getPlayerState) return;
+      // 1 = PLAYING, 2 = PAUSED
+      const st = P.getPlayerState();
+      if (st === 1) P.pauseVideo();
+      else P.playVideo();
+    });
+  }
+
+  const play10Btn = $("play10Btn");
+  if (play10Btn) {
+    play10Btn.addEventListener("click", () => {
+      const P = window.YT_PLAYER;
+      if (!P || !P.seekTo || !P.getDuration || !P.playVideo) return;
+      const dur = Math.max(0, P.getDuration() || 0);
+      const start = Math.floor(Math.random() * Math.max(1, dur - 10));
+      try { P.seekTo(start, true); } catch {}
+      try { P.playVideo(); } catch {}
+      // ไม่ stop อัตโนมัติ 10 วิ เพราะบางธีมอยากให้ผู้ใช้กดเอง
+    });
+  }
+
+  const nextBtn = $("nextBtn");
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      if (!POOL.length) return;
+      currentIndex = clamp(currentIndex + 1, 0, POOL.length - 1);
+      loadCurrent();
+    });
+  }
+
+  const prevBtn = $("prevBtn");
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      if (!POOL.length) return;
+      currentIndex = clamp(currentIndex - 1, 0, POOL.length - 1);
+      loadCurrent();
+    });
+  }
+}
+
+// ---- Bootstrap ----
+document.addEventListener("DOMContentLoaded", async () => {
+  // ถ้าไฟล์นี้ถูก include เฉพาะในหน้าเล่น จะไม่ต้อง guard; แต่กันไว้ให้
+  const isPlayPage = /\/tubeten-play(?:\.html)?$/.test(location.pathname) || $("player");
+  if (!isPlayPage) return;
+
+  const playlist = getPlaylistId();
+  if (!playlist) {
+    // ไม่มีพารามิเตอร์ playlist ให้กลับหน้าแรก
+    location.href = "tubeten.html";
     return;
   }
-  const origin = window.location.origin || (location.protocol + '//' + location.host);
-  YT_PLAYER = new YT.Player('player', {
-    height:'360', width:'100%', videoId,
-    playerVars:{ rel:0, modestbranding:1, origin },
-    events:{
-      onReady: (e)=> { try{ e.target.cueVideoById(videoId); }catch(e){}; },
-      onStateChange: onPlayerStateChange,
-      onError: onPlayerError
-    }
-  });
-}
-function onPlayerStateChange(e){ if(e.data === YT.PlayerState.ENDED) setTimeout(()=>goNext(true),300); }
-function onPlayerError(e){ console.warn('YT error', e.data); setTimeout(()=>goNext(true),300); }
 
-/* --- UI / controls --- */
-function updateUI(){
-  const idx = Math.min(currentIndex+1, POOL.length);
-  document.getElementById('uiIndex').textContent = idx;
-  document.getElementById('uiTotal').textContent = POOL.length;
-  document.getElementById('uiScore').textContent = score;
-  const val = (document.getElementById('answerInput').value||'').trim();
-  const ok = !!val && POOL_FULL.some(i => normalizeTitle(i.title) === normalizeTitle(val)); // accept only if in full list
-  const confirmBtn = document.getElementById('btnConfirm');
-  if (confirmBtn) confirmBtn.disabled = !ok;
-}
+  // จำนวนข้อที่อยากเล่นใน session นี้ (ดึงจาก input ถ้ามี, ไม่งั้นใช้ 50)
+  const wantInput = $("questionCount");
+  const want = wantInput ? parseInt((wantInput.value || "50"), 10) : 50;
+  const sessionCount = clamp(isNaN(want) ? 50 : want, 1, 100);
 
-/* populate datalist with randomized order */
-function populateDatalistRandom(items){
-  const dl = document.getElementById('titlesList');
-  if(!dl) return;
-  dl.innerHTML = '';
-  const shuffled = shuffleArray(items);
-  shuffled.forEach(it => {
-    const o = document.createElement('option');
-    o.value = it.title;
-    dl.appendChild(o);
-  });
-}
-
-/* play random 10s snippet */
-function playRandom10s(){
-  if(!YT_PLAYER){ createModal('Player is Loading','Please try again in a moment','OK'); return; }
-  try{
-    const dur = YT_PLAYER.getDuration() || 0;
-    let start = 0;
-    if(dur > 30){ const min=10, max=Math.max(min, dur-20); start = Math.random()*(max-min)+min; }
-    YT_PLAYER.seekTo(start, true);
-    YT_PLAYER.playVideo();
-    if(play10Timer) clearTimeout(play10Timer);
-    play10Timer = setTimeout(()=>{ try{ YT_PLAYER.pauseVideo(); }catch(e){} }, 10000);
-  }catch(e){ console.warn(e); }
-}
-function pauseToggle(){ if(!YT_PLAYER) return; const s = YT_PLAYER.getPlayerState(); if(s===YT.PlayerState.PLAYING) YT_PLAYER.pauseVideo(); else YT_PLAYER.playVideo(); }
-
-function handleConfirm(){
-  const val = (document.getElementById('answerInput').value||'').trim();
-  const correct = normalizeTitle(POOL[currentIndex].title);
-  const vid = POOL[currentIndex].videoId || '';
-  const iframe = `
-    <div class="answer-embed">
-      <iframe
-        class="answer-iframe"
-        src="https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&autoplay=0&controls=1"
-        title="Answer preview"
-        allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-      ></iframe>
-    </div>`;
-
-  if(!val || normalizeTitle(val) !== correct) {
-    createModal(
-      'Wrong',
-      `${iframe}<p class="answer-text">The answer is: "<strong>${POOL[currentIndex].title}</strong>"</p>`,
-      'Next Video',
-      ()=>{ document.getElementById('answerInput').value=''; goNext(false); }
-    );
-  } else {
-    score++;
-    createModal(
-      'Correct! 🎉',
-      `${iframe}<p class="answer-text">"<strong>${POOL[currentIndex].title}</strong>"</p>`,
-      'Next Video',
-      ()=>{ document.getElementById('answerInput').value=''; goNext(false); }
-    );
-  }
-}
-
-
-function handleSkip(){ goNext(false); }
-function goNext(auto=false){
-  if(play10Timer){ clearTimeout(play10Timer); play10Timer = null; }
-  if(currentIndex < POOL.length - 1){ currentIndex++; document.getElementById('answerInput').value=''; loadCurrent(); }
-  else {
-    const params = new URLSearchParams({ score:String(score), total:String(POOL.length) });
-    const playlist = qParam('playlist'); if(playlist) params.set('playlist', playlist);
-    location.href = `tubeten-result.html?${params.toString()}`;
-  }
-}
-function loadCurrent(){ updateUI(); const it = POOL[currentIndex]; if(!it) return; createOrLoadPlayer(it.videoId); }
-
-/* modal helper */
-function createModal(title,message,cbText='OK',cb)
-{ 
-  const root=document.getElementById('ttModalRoot'); 
-        root.innerHTML=''; 
-  const bg=document.createElement('div'); 
-        bg.className='tt-modal-backdrop'; 
-  const m=document.createElement('div'); 
-        m.className='tt-modal'; 
-        m.innerHTML=`<h3>${title}</h3><p>${message}</p>`; 
-  const b=document.createElement('button'); 
-        b.className='btn ten'; 
-        b.textContent=cbText; 
-        b.addEventListener('click',()=>{ 
-          root.style.display='none'; 
-          root.innerHTML=''; 
-          if(cb) cb(); 
-        }); 
-        m.appendChild(b); 
-        bg.appendChild(m); 
-        root.appendChild(bg); 
-        root.style.display='block'; 
-}
-
-/* --- UI wiring --- */
-function wireUI(){
-  const btnPlay10 = document.getElementById('btnPlay10');
-  if(btnPlay10) btnPlay10.addEventListener('click', playRandom10s);
-  const pause = document.getElementById('btnPauseSmall');
-  if(pause) pause.addEventListener('click', pauseToggle);
-  const btnSkip = document.getElementById('btnSkip');
-  if(btnSkip) btnSkip.addEventListener('click', handleSkip);
-  const btnConfirm = document.getElementById('btnConfirm');
-  if(btnConfirm) btnConfirm.addEventListener('click', handleConfirm);
-  const input = document.getElementById('answerInput');
-  if(input) input.addEventListener('input', updateUI);
-}
-
-/* --- BOOTSTRAP: fetch full pool, determine session count, fetch session items --- */
-window.addEventListener('DOMContentLoaded', async () => {
-  wireUI();
-  const playlist = qParam('playlist');
-  if(!playlist) { alert('No playlist detected, return to homescreen'); location.href='tubeten.html'; return; }
   try {
-    // 1) fetch full stored pool so we know available items for datalist + total count
-    try {
-      POOL_FULL = await fetchPoolFull(playlist);
-    } catch(e) {
-      console.warn('fetchPoolFull failed, will try session fallback:', e);
-      POOL_FULL = [];
+    // 1) ดึงรายการเต็ม (เพื่อ datalist + ตัวเลขรวม)
+    POOL_FULL = await fetchPoolFull(playlist);
+
+    // 2) ดึงชุดที่จะเล่น (สุ่มจากฝั่ง server ตาม sessionCount)
+    let raw = await fetchSessionItems(playlist, sessionCount);
+
+    // 3) normalize + fallback กรณีฝั่ง server ส่งว่าง
+    POOL = (Array.isArray(raw) ? raw : []).map(normalizeItem).filter(x => x.videoId);
+
+    if (POOL.length === 0 && POOL_FULL.length > 0) {
+      POOL = POOL_FULL.slice(0, sessionCount).map(normalizeItem).filter(x => x.videoId);
     }
 
-    // 2) determine desired session play count
-    const reqCount = parseInt(qParam('count') || '', 10);
-    let sessionCount;
-    if (POOL_FULL && POOL_FULL.length > 0) {
-      sessionCount = Number.isFinite(reqCount) && reqCount > 0 ? Math.min(reqCount, POOL_FULL.length) : POOL_FULL.length;
-    } else {
-      sessionCount = Number.isFinite(reqCount) && reqCount > 0 ? reqCount : 10;
+    // 4) ไม่มีวิดีโอให้เล่นจริง ๆ
+    if (POOL.length === 0) {
+      console.warn("[TT] session empty", { raw, POOL_FULL });
+      alert("No playable videos in this playlist right now.");
+      location.href = "tubeten.html";
+      return;
     }
 
-    // 3) fetch session items from server (server will randomize)
-    POOL = await fetchSessionItems(playlist, sessionCount);
+    // 5) เติม datalist สำหรับ auto-complete (ถ้ามี)
+    populateDatalistRandom(POOL_FULL.length ? POOL_FULL : POOL);
 
-    // 4) for dropdown we want randomized order of full pool (if available), otherwise randomized session pool
-    const datalistSource = (POOL_FULL && POOL_FULL.length>0) ? POOL_FULL : POOL;
-    populateDatalistRandom(datalistSource);
-
-    // 5) init player & ui
-    await ensureYouTubeApi().catch(e => console.warn('YT API load issue', e));
-    currentIndex = 0; score = 0;
+    // 6) โหลด YouTube API แล้วเริ่มเล่นคลิปแรก
+    await ensureYouTubeApi();
+    bindControls();
+    currentIndex = 0;
+    score = 0;
+    console.log("[TT] playlist=", playlist, "POOL_FULL=", POOL_FULL.length, "SESSION=", POOL.length);
     loadCurrent();
-    updateUI();
-  } catch(err){
-    console.error(err);
-    createModal('Oops..','Something seems wrong, Please try again in a moment','OK', ()=>location.href='tubeten.html');
+  } catch (e) {
+    console.error("Boot failed:", e);
+    alert("Failed to start game. Please try again.");
   }
 });

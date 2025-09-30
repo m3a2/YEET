@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     status.textContent = 'Importing playlist…';
 
     try {
-      const resp = await fetch('/api/import-playlist', {
+      const resp = await fetch('/api/import-playlist?force=1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })

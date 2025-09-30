@@ -17,7 +17,7 @@ export async function onRequest(context) {
     const urlObj = new URL(request.url);
     const force = urlObj.searchParams.get("force") === "1";
 
-    const key = `pool:${playlistId}`;
+    const key = `pool:v2:${playlistId}`;
 
     // Serve from KV cache if present and not forced
     if (!force) {
@@ -61,10 +61,9 @@ export async function onRequest(context) {
     const isOk = (d) => {
       if (!d) return false;
       const s = d.status || {};
-      // Must be public, processed and embeddable (embeddable can be true/undefined; false = not ok)
-      if (s.privacyStatus !== 'public') return false;
-      if (s.uploadStatus && s.uploadStatus !== 'processed') return false;
-      if (s.embeddable === false) return false;
+        if (s.privacyStatus === 'private') return false;
+        if (s.uploadStatus && s.uploadStatus !== 'processed') return false;
+        if (s.embeddable === false) return false;
       // Optional: regionRestriction checks could be added here if needed
       return true;
     };
